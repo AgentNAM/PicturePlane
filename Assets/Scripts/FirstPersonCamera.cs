@@ -7,6 +7,7 @@ public class FirstPersonCamera : MonoBehaviour
     // First-person camera code: https://www.youtube.com/watch?v=f473C43s8nE
 
     public GameObject player3D;
+    public GameObject player2D;
 
     public float sensitivityX;
     public float sensitivityY;
@@ -14,11 +15,13 @@ public class FirstPersonCamera : MonoBehaviour
     private float xRotation;
     private float yRotation;
 
-    private bool modeIs3D = true;
+    private Player2DController player2DControllerScript;
 
     // Start is called before the first frame update
     void Start()
     {
+        player2DControllerScript = GameObject.Find("Player2DRealMarker").GetComponent<Player2DController>();
+
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -26,13 +29,7 @@ public class FirstPersonCamera : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // Switch between 2D and 3D modes when the player presses E
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            modeIs3D = !modeIs3D;
-        }
-
-        if (modeIs3D)
+        if (player2DControllerScript.modeIs3D)
         {
             // Get mouse input
             float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensitivityX;

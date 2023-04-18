@@ -8,43 +8,42 @@ using UnityEngine;
 
 public class Player3DController : MonoBehaviour
 {
+    public GameObject player2D;
+
     public float horizontalInput;
     public float verticalInput;
 
     public float speed;
 
-    private bool modeIs3D = true;
+    private Rigidbody player3DRb;
+
+    private Player2DController player2DControllerScript;
 
     // Start is called before the first frame update
     void Start()
     {
-        
+        player2DControllerScript = GameObject.Find("Player2DRealMarker").GetComponent<Player2DController>();
+        player3DRb = GetComponent<Rigidbody>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        // Switch between 2D and 3D modes when the player presses E
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            modeIs3D = !modeIs3D;
-        }
-
-        if (modeIs3D)
+        if (player2DControllerScript.modeIs3D)
         {
             // Get WASD input
             horizontalInput = Input.GetAxis("Horizontal");
             verticalInput = Input.GetAxis("Vertical");
 
             // Move 3D player based on WASD input
-            transform.Translate(Vector3.forward * Time.deltaTime * speed * verticalInput);
-            transform.Translate(Vector3.right * Time.deltaTime * speed * horizontalInput);
+            // TODO: Try to implement player3DRb.AddForce()
+            transform.Translate(verticalInput * speed * Time.deltaTime * Vector3.forward);
+            transform.Translate(horizontalInput * speed * Time.deltaTime * Vector3.right);
         }
         else
         {
             // If the current mode is 2D, set Player3D's velocity to zero
-            Rigidbody rb = GetComponent<Rigidbody>();
-            rb.velocity = Vector3.zero;
+            player3DRb.velocity = Vector3.zero;
         }
     }
 }

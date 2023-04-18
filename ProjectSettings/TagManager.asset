@@ -7,11 +7,12 @@ TagManager:
   - SurfaceGray
   - SurfaceGreen
   - SurfaceMagenta
+  - CameraScreenArea
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Player3D
   - Water
   - UI
   - 
