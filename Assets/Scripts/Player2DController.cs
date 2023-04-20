@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class Player2DController : MonoBehaviour
 {
-    public GameObject player2DSeenMarker;
+    public GameObject seenMarker;
     public GameObject cameraScreenArea;
 
     public Material unobstructedView;
@@ -31,56 +31,35 @@ public class Player2DController : MonoBehaviour
 
     private Vector3 lastSafePos;
 
-    private float lcForwardInterval = 0.1f;
-    private float lcBackwardInterval = 0.01f;
+    private float lcForwardInterval = 1.0f;
+    private float lcBackwardInterval = 0.1f;
 
-    private string closestSurfaceType;
-
-    private bool onFloor = false;
+    public bool onFloor = false;
 
     private string[] surfaces = new string[] { "SurfaceGray", "SurfaceGreen", "SurfaceMagenta" };
 
     // Start is called before the first frame update
     void Start()
     {
-        player2DSeenMarker.transform.localScale = new Vector3 (seenScale, seenScale, seenScale);
+        seenMarker.transform.localScale = new Vector3 (seenScale, seenScale, seenScale);
     }
 
     // Update is called once per frame
     void LateUpdate()
     {
-        if (Input.GetKeyDown(KeyCode.T))
-        {
-            Debug.Log(FindClosestSurfaceType(transform.position));
-        }
         // --- PERSPECTIVE SWITCHING --- //
         // Check if the player presses E
         if (Input.GetKeyDown(KeyCode.E))
         {
-            if (modeIs3D)
-            {
-                // Make sure Player2D is on screen
-                if (IsPlayerOnScreen())
-                {
-                    // Make sure the camera has an unobstructed view of Player2D
-                    if (FindClosestSurfaceType(transform.position) == null)
-                    {
-                        SwitchPerspectives(true);
-                    }
-                }
-            }
-            else
-            {
-                SwitchPerspectives(false);
-            }
+            SwitchPerspectives();
         }
 
-        // Set Player2D rotation and player2DSeenMarker rotation to face the camera
+        // Set Player2D rotation and seenMarker rotation to face the camera
         transform.rotation = Camera.main.transform.rotation;
-        player2DSeenMarker.transform.rotation = Camera.main.transform.rotation;
+        seenMarker.transform.rotation = Camera.main.transform.rotation;
 
-        // Set position of player2DSeenMarker
-        player2DSeenMarker.transform.position = RealToSeen(transform.position) + Camera.main.transform.position;
+        // Set position of seenMarker
+        seenMarker.transform.position = RealToSeen(transform.position) + Camera.main.transform.position;
 
         // Set Player2D scale relative to its distance from the camera
         float realScale = SeenToReal(seenScale, transform.position);
@@ -89,13 +68,13 @@ public class Player2DController : MonoBehaviour
         // Indicate whether the camera's view of Player2D is obstructed
         if (modeIs3D)
         {
-            if (FindClosestSurfaceType(transform.position) == null)
+            if (IsViewClear(transform.position))
             {
-                player2DSeenMarker.GetComponent<Renderer>().material = unobstructedView;
+                seenMarker.GetComponent<Renderer>().material = unobstructedView;
             }
             else
             {
-                player2DSeenMarker.GetComponent<Renderer>().material = obstructedView;
+                seenMarker.GetComponent<Renderer>().material = obstructedView;
             }
         }
 
@@ -103,30 +82,30 @@ public class Player2DController : MonoBehaviour
         if (!modeIs3D)
         {
             // Push Player2D back to the surface closest to Player3D
-            transform.position = FindClosestSurface(player2DSeenMarker.transform.position);
+            ReSyncRealPosition();
 
             // --- HORIZONTAL MOVEMENT --- //
-            Vector3 lastPos = transform.position; // Get Player2D's position before moving horizontally
+            Vector3 lastSeenPos = seenMarker.transform.position; // Get Player2D's position before moving horizontally
 
-            // Get horizontal input and move Player2D accordingly 
-            horizontalInput = Input.GetAxisRaw("Horizontal");
-            transform.Translate(Vector3.right * Time.deltaTime * SeenToReal(speed, transform.position) * horizontalInput);
+            horizontalInput = Input.GetAxisRaw("Horizontal"); // Get horizontal input
 
-            ReSyncPlayerPositions();
+            seenMarker.transform.Translate(Vector3.right * Time.deltaTime * speed * horizontalInput); // Apply horizontal movement
+
+            ReSyncRealPosition();
 
             // Check if Player2D's new position is inside a green surface
-            if (closestSurfaceType == "SurfaceGreen")
+            if (GetScaledCollision(seenMarker.transform.position) == "SurfaceGreen")
             {
-                if (!MoveToFreeSpace(maxWalkSlope, Vector3.up)) {
-                    transform.position = lastPos;
+                MoveAlongSlope(Vector3.up, maxWalkSlope, out bool isSlope);
+                if (!isSlope) {
+                    seenMarker.transform.position = lastSeenPos;
                 }
             }
 
-            ReSyncPlayerPositions();
+            ReSyncRealPosition();
 
             // --- VERTICAL MOVEMENT --- //
-            // TODO: Prevent velocityY from being affected by actual distance
-            lastPos = transform.position; // Get Player2D's position before moving vertically
+            lastSeenPos = seenMarker.transform.position; // Get Player2D's position before moving vertically
 
             // Apply semi-realistic gravity
             if (velocityY > -maxFallSpeed)
@@ -134,6 +113,7 @@ public class Player2DController : MonoBehaviour
                 velocityY -= gravity;
             }
 
+            // If Player2D is on the floor and the player presses W, jump
             if (Input.GetKeyDown(KeyCode.W) && onFloor)
             {
                 velocityY = jumpStrength;
@@ -142,19 +122,20 @@ public class Player2DController : MonoBehaviour
                 {
                     CancelInvoke("CoyoteTime");
                 }
-                Debug.Log($"{velocityY}, {SeenToReal(velocityY, transform.position)}");
             }
 
-            transform.Translate(Vector3.up * Time.deltaTime * SeenToReal(velocityY, transform.position));
+            seenMarker.transform.Translate(Vector3.up * Time.deltaTime * velocityY);
 
-            ReSyncPlayerPositions();
+            ReSyncRealPosition();
 
             // Check if Player2D's new position is inside a green surface
-            if (closestSurfaceType == "SurfaceGreen")
+            if (GetScaledCollision(seenMarker.transform.position) == "SurfaceGreen")
             {
-                if (!MoveToFreeSpace(maxSlideSlope, Vector3.right))
+                MoveAlongSlope(Vector3.right, maxSlideSlope, out bool isSlope);
+
+                if (!isSlope)
                 {
-                    if (RealToSeen(lastPos).y > RealToSeen(transform.position).y)
+                    if (GetScaledCollision(GetOffsetPos(seenMarker.transform.position, -transform.up, seenScale / 2)) == "SurfaceGreen")
                     {
                         onFloor = true;
 
@@ -165,22 +146,21 @@ public class Player2DController : MonoBehaviour
                     }
 
                     velocityY = 0.0f;
-                    transform.position = lastPos;
+                    seenMarker.transform.position = lastSeenPos;
                 }
-                
             }
             else
             {
                 Invoke("CoyoteTime", jumpTimer);
             }
 
-            ReSyncPlayerPositions();
+            ReSyncRealPosition();
 
             // --- MAGENTA SURFACE COLLISION --- //
-            if (closestSurfaceType == "SurfaceMagenta" || !IsPlayerOnScreen())
+            if (GetScaledCollision(seenMarker.transform.position) == "SurfaceMagenta" || !IsPlayerOnScreen())
             {
-                transform.position = lastSafePos;
-                SwitchPerspectives(false);
+                ReSyncSeenPosition();
+                SwitchPerspectives();
             }
         }
     }
@@ -188,32 +168,74 @@ public class Player2DController : MonoBehaviour
     bool IsPlayerOnScreen()
     {
         cameraScreenArea.SetActive(true);
-        bool onScreen = FindClosestSurfaceType(transform.position) == "CameraScreenArea";
+        bool onScreen = FindSurfaceTypeAtPoint(transform.position) == "CameraScreenArea";
         cameraScreenArea.SetActive(false);
         return onScreen;
     }
 
-    void SwitchPerspectives(bool switchingTo2d)
+    bool IsViewClear(Vector3 basePos)
     {
-        if (switchingTo2d)
+        /*
+        Vector3[] localDirs = new Vector3[]
         {
-            lastSafePos = transform.position;
-            gameObject.GetComponent<MeshRenderer>().enabled = false;
+            Vector3.zero,
+            transform.right,
+            -transform.right,
+            transform.up,
+            -transform.up
+        };
+        */
+
+        Vector3[] localDirs = new Vector3[]
+        {
+            Vector3.zero
+        };
+
+        foreach (Vector3 localDir in localDirs)
+        {
+            if (FindSurfaceTypeAtPoint(GetOffsetPos(basePos, localDir, seenScale / 2)) != null)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    void SwitchPerspectives()
+    {
+        if (modeIs3D)
+        {
+            // Make sure Player2D is on screen
+            if (IsPlayerOnScreen())
+            {
+                // Make sure the camera has an unobstructed view of Player2D
+                if (IsViewClear(transform.position))
+                {
+                    lastSafePos = transform.position;
+                    modeIs3D = false;
+                }
+            }
         }
         else
         {
-            gameObject.GetComponent<MeshRenderer>().enabled = true;
+            transform.position = FindClosestPoint(seenMarker.transform.position, true);
+            modeIs3D = true;
+            onFloor = false;
         }
-        // Switch between 2D and 3D modes
-        modeIs3D = !modeIs3D;
+
         // Reset Player2D's Y-velocity
         velocityY = 0.0f;
     }
 
-    void ReSyncPlayerPositions()
+    void ReSyncRealPosition()
     {
-        player2DSeenMarker.transform.position = RealToSeen(transform.position) + Camera.main.transform.position;
-        transform.position = FindClosestSurface(player2DSeenMarker.transform.position);
+        transform.position = FindClosestPoint(seenMarker.transform.position);
+    }
+
+    void ReSyncSeenPosition()
+    {
+        seenMarker.transform.position = RealToSeen(lastSafePos) + Camera.main.transform.position;
     }
 
     float SeenToReal(float seenValue, Vector3 referencePoint)
@@ -227,6 +249,165 @@ public class Player2DController : MonoBehaviour
         return Vector3.ClampMagnitude(realValue - Camera.main.transform.position, seenCamDistance);
     }
 
+    // /*
+    // vvvvvvvvvvvvvvvvvvvvvvvvvv
+
+    private string FindSurfaceTypeAtPoint(Vector3 endPoint)
+    {
+        // Do a Linecast between the camera and Player2D, then return the first GameObject hit by the Linecast
+        Physics.Linecast(Camera.main.transform.position, endPoint, out RaycastHit hit);
+
+        // Return the tag of the first GameObject hit by the Linecast, or return null if the Linecast did not hit anything
+        if (hit.collider)
+        {
+            return hit.collider.tag;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    Vector3 FindClosestPoint(Vector3 aimPos, bool pullBack = false)
+    {
+        Vector3 castPos = aimPos;
+
+        // Extend the cast until a surface is hit
+        while (!surfaces.Contains(FindSurfaceTypeAtPoint(castPos)))
+        {
+            castPos += Vector3.ClampMagnitude(aimPos - Camera.main.transform.position, lcForwardInterval);
+        }
+
+        // Pull back until no surface is hit
+        while (surfaces.Contains(FindSurfaceTypeAtPoint(castPos)))
+        {
+            castPos -= Vector3.ClampMagnitude(aimPos - Camera.main.transform.position, lcBackwardInterval);
+        }
+
+        if (!pullBack)
+        {
+            castPos += Vector3.ClampMagnitude(aimPos - Camera.main.transform.position, lcBackwardInterval);
+        }
+
+        return castPos;
+    }
+
+    Vector3 GetOffsetPos(Vector3 basePos, Vector3 localDir, float offsetAmount)
+    {
+        Vector3 offset = localDir * SeenToReal(offsetAmount, basePos);
+        return basePos + offset;
+    }
+
+    string FindOffsetSurfaceType(Vector3 basePos, Vector3 localDir, float offsetAmount)
+    {
+        Vector3 offsetPos = GetOffsetPos(basePos, localDir, offsetAmount);
+        return FindSurfaceTypeAtPoint(FindClosestPoint(offsetPos));
+    }
+
+    string GetScaledCollision(Vector3 basePos)
+    {
+        Vector3[] localDirs = new Vector3[]
+        {
+            Vector3.zero,
+            transform.right,
+            -transform.right,
+            transform.up,
+            -transform.up
+        };
+
+        string[] collidingSurfaceTypes = new string[localDirs.Length];
+
+        for (int i = 0; i < localDirs.Length; i++)
+        {
+            Vector3 localDir = localDirs[i];
+            collidingSurfaceTypes[i] = FindOffsetSurfaceType(basePos, localDir, seenScale / 2);
+        }
+
+        // Debug.Log(String.Join(' ', collidingSurfaceTypes));
+
+        string prioritizedSurfaceType = GetPrioritizedSurfaceType(collidingSurfaceTypes);
+
+        return prioritizedSurfaceType;
+    }
+
+    string GetPrioritizedSurfaceType(string[] surfaceTypes)
+    {
+        string highestSurface = null;
+
+        foreach (string surfaceType in surfaceTypes)
+        {
+            if (Array.IndexOf(surfaces, surfaceType) > Array.IndexOf(surfaces, highestSurface))
+            {
+                highestSurface = surfaceType;
+            }
+        }
+
+        return highestSurface;
+    }
+
+    void MoveAlongSlope(Vector3 worldDir, float tolerance, out bool canMove)
+    {
+        canMove = true;
+        // Move Player2D slightly in positive direction
+        // transform.Translate(direction * Time.deltaTime * SeenToReal(tolerance, transform.position));
+        seenMarker.transform.Translate(worldDir * Time.deltaTime * tolerance);
+        ReSyncRealPosition();
+        // Check if Player2D is still inside a green surface
+        if (GetScaledCollision(seenMarker.transform.position) == "SurfaceGreen")
+        {
+            // Move Player2D slightly in negative direction
+            // transform.Translate(-direction * Time.deltaTime * SeenToReal(tolerance * 2, transform.position));
+            seenMarker.transform.Translate(-worldDir * Time.deltaTime * tolerance * 2);
+            ReSyncRealPosition();
+            // Check if Player2D is still inside a green surface
+            if (GetScaledCollision(seenMarker.transform.position) == "SurfaceGreen")
+            {
+                // The player cannot move smoothly along this slope
+                canMove = false;
+            }
+        }
+
+        /*
+        Vector3 offsetPosP = GetOffsetPos(seenMarker.transform.position, slopeDir, tolerance);
+        Vector3 offsetPosN = GetOffsetPos(seenMarker.transform.position, -slopeDir, tolerance);
+
+        if (GetScaledCollision(offsetPosP) != "SurfaceGreen")
+        {
+            if (worldDir == Vector3.up)
+            {
+                Debug.Log($"Free space + {GetScaledCollision(offsetPosP)}, {worldDir}");
+            }
+
+            seenMarker.transform.Translate(worldDir * tolerance * Time.deltaTime);
+            ReSyncRealPosition();
+            canMove = true;
+        }
+        else if (GetScaledCollision(offsetPosN) != "SurfaceGreen")
+        {
+            if (worldDir == Vector3.up)
+            {
+                Debug.Log($"Free space - {GetScaledCollision(offsetPosN)}, {-worldDir}");
+            }
+
+            seenMarker.transform.Translate(-worldDir * tolerance * Time.deltaTime);
+            ReSyncRealPosition();
+            canMove = true;
+        }
+        else
+        {
+            if (worldDir == Vector3.up)
+            {
+                Debug.Log("Free space 0");
+            }
+            canMove = false;
+        }
+        */
+    }
+
+    // ^^^^^^^^^^^^^^^^^^^
+    // */
+
+    /*
     // Determine which point in 3D space the 2D player needs to be fixed
     Vector3 FindClosestSurface(Vector3 aimPos)
     {
@@ -234,6 +415,7 @@ public class Player2DController : MonoBehaviour
 
         Vector3[] localDirs = new Vector3[]
         {
+            Vector3.zero,
             transform.right,
             -transform.right,
             transform.up,
@@ -247,13 +429,13 @@ public class Player2DController : MonoBehaviour
         {
             castPos += Vector3.ClampMagnitude(aimPos - Camera.main.transform.position, lcForwardInterval);
 
-            collidingSurfaceTypes = FindCollidingSurfaceTypes(castPos, localDirs, collidingSurfaceTypes);
+            collidingSurfaceTypes = FindCollidingSurfaceTypes(castPos, localDirs, collidingSurfaceTypes, true);
         }
 
         // Pull the Linecast back until it stops hitting things
         while (surfaces.Contains(FindClosestSurfaceType(castPos)))
         {
-            collidingSurfaceTypes = FindCollidingSurfaceTypes(castPos, localDirs, collidingSurfaceTypes);
+            collidingSurfaceTypes = FindCollidingSurfaceTypes(castPos, localDirs, collidingSurfaceTypes, false);
 
             castPos -= Vector3.ClampMagnitude(aimPos - Camera.main.transform.position, lcBackwardInterval);
         }
@@ -262,13 +444,18 @@ public class Player2DController : MonoBehaviour
         return castPos;
     }
 
-    string[] FindCollidingSurfaceTypes(Vector3 basePos, Vector3[] localDirs, string[] oldSurfaceTypes)
+    string[] FindCollidingSurfaceTypes(Vector3 basePos, Vector3[] localDirs, string[] oldSurfaceTypes, bool skipNonNull)
     {
-        string[] collidingSurfaceTypes = new string[localDirs.Length];
-        Array.Copy(oldSurfaceTypes, collidingSurfaceTypes, collidingSurfaceTypes.Length);
+        string[] newSurfaceTypes = new string[localDirs.Length];
+        Array.Copy(oldSurfaceTypes, newSurfaceTypes, newSurfaceTypes.Length);
 
         for (int i = 0; i < localDirs.Length; i++)
         {
+            if (skipNonNull && newSurfaceTypes[i] != null)
+            {
+                continue;
+            }
+
             Vector3 localDir = localDirs[i];
             Vector3 offset = localDir * SeenToReal(seenScale / 2, basePos);
             Vector3 offsetPos = basePos + offset;
@@ -277,11 +464,21 @@ public class Player2DController : MonoBehaviour
 
             if (surfaces.Contains(offsetSurfaceType))
             {
-                collidingSurfaceTypes[i] = offsetSurfaceType;
+                newSurfaceTypes[i] = offsetSurfaceType;
+
+                if (localDir == -transform.up && offsetSurfaceType == "SurfaceGreen")
+                {
+                    onFloor = true;
+
+                    if (IsInvoking("CoyoteTime"))
+                    {
+                        CancelInvoke("CoyoteTime");
+                    }
+                }
             }
         }
 
-        return collidingSurfaceTypes;
+        return newSurfaceTypes;
     }
 
     string HighestPrioritySurface(string[] surfaceTypes)
@@ -318,14 +515,16 @@ public class Player2DController : MonoBehaviour
     bool MoveToFreeSpace(float tolerance, Vector3 direction)
     {
         // Move Player2D slightly in positive direction
-        transform.Translate(direction * Time.deltaTime * SeenToReal(tolerance, transform.position));
-        ReSyncPlayerPositions();
+        // transform.Translate(direction * Time.deltaTime * SeenToReal(tolerance, transform.position));
+        seenMarker.transform.Translate(direction * Time.deltaTime * tolerance);
+        ReSyncRealPosition();
         // Check if Player2D is still inside a green surface
         if (closestSurfaceType == "SurfaceGreen")
         {
             // Move Player2D slightly in negative direction
-            transform.Translate(-direction * Time.deltaTime * SeenToReal(tolerance * 2, transform.position));
-            ReSyncPlayerPositions();
+            // transform.Translate(-direction * Time.deltaTime * SeenToReal(tolerance * 2, transform.position));
+            seenMarker.transform.Translate(-direction * Time.deltaTime * tolerance * 2);
+            ReSyncRealPosition();
             // Check if Player2D is still inside a green surface
             if (closestSurfaceType == "SurfaceGreen")
             {
@@ -335,6 +534,7 @@ public class Player2DController : MonoBehaviour
         }
         return true;
     }
+    */
 
     void CoyoteTime()
     {
