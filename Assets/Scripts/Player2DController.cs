@@ -2,7 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Player2DController : MonoBehaviour
 {
@@ -17,9 +19,9 @@ public class Player2DController : MonoBehaviour
     private float horizontalInput;
 
     private float speed = 0.3f;
-    private float gravity = 0.03f;
+    private float gravity = 2.5f;
     private float jumpStrength = 0.75f;
-    private float jumpTimer = 0.15f;
+    private float coyoteTime = 0.15f;
     private float maxFallSpeed = 2.0f;
     private float maxWalkSlope = 0.15f;
     private float maxSlideSlope = 0.075f;
@@ -36,7 +38,7 @@ public class Player2DController : MonoBehaviour
 
     public bool onFloor = false;
 
-    private string[] surfaces = new string[] { "SurfaceGray", "SurfaceGreen", "SurfaceMagenta" };
+    private readonly string[] surfaces = new string[] { "SurfaceGray", "EntryZone", "SurfaceGreen", "SurfaceMagenta", "Goal" };
 
     // Start is called before the first frame update
     void Start()
@@ -96,7 +98,10 @@ public class Player2DController : MonoBehaviour
             // Check if Player2D's new position is inside a green surface
             if (GetScaledCollision(seenMarker.transform.position) == "SurfaceGreen")
             {
+                // If Player2D is colliding with a sloped floor/ceiling, allow them to move along the slope
                 MoveAlongSlope(Vector3.up, maxWalkSlope, out bool isSlope);
+
+                // If Player2D is colliding with a wall, reset their position
                 if (!isSlope) {
                     seenMarker.transform.position = lastSeenPos;
                 }
@@ -107,10 +112,10 @@ public class Player2DController : MonoBehaviour
             // --- VERTICAL MOVEMENT --- //
             lastSeenPos = seenMarker.transform.position; // Get Player2D's position before moving vertically
 
-            // Apply semi-realistic gravity
+            // Player2D accelerates downwards
             if (velocityY > -maxFallSpeed)
             {
-                velocityY -= gravity;
+                velocityY -= gravity * Time.deltaTime;
             }
 
             // If Player2D is on the floor and the player presses W, jump
@@ -118,45 +123,54 @@ public class Player2DController : MonoBehaviour
             {
                 velocityY = jumpStrength;
                 onFloor = false;
-                if (IsInvoking("CoyoteTime"))
+
+                // Disable coyote time immediately
+                if (IsInvoking("DisableJump"))
                 {
-                    CancelInvoke("CoyoteTime");
+                    CancelInvoke("DisableJump");
                 }
             }
 
-            seenMarker.transform.Translate(Vector3.up * Time.deltaTime * velocityY);
+            seenMarker.transform.Translate(Vector3.up * Time.deltaTime * velocityY); // Apply vertical movement
 
             ReSyncRealPosition();
 
             // Check if Player2D's new position is inside a green surface
             if (GetScaledCollision(seenMarker.transform.position) == "SurfaceGreen")
             {
+                // If Player2D is colliding with a sloped wall, allow them to move along the slope
                 MoveAlongSlope(Vector3.right, maxSlideSlope, out bool isSlope);
 
+                // If Player2D is colliding with a floor/ceiling...
                 if (!isSlope)
                 {
+                    // Check if Player2D is colliding with a floor
                     if (GetScaledCollision(GetOffsetPos(seenMarker.transform.position, -transform.up, seenScale / 2)) == "SurfaceGreen")
                     {
                         onFloor = true;
 
-                        if (IsInvoking("CoyoteTime"))
+                        // Disable coyote time immediately
+                        if (IsInvoking("DisableJump"))
                         {
-                            CancelInvoke("CoyoteTime");
+                            CancelInvoke("DisableJump");
                         }
                     }
 
+                    // Reset Player2D's y-velocity and position
                     velocityY = 0.0f;
                     seenMarker.transform.position = lastSeenPos;
                 }
             }
             else
             {
-                Invoke("CoyoteTime", jumpTimer);
+                // When Player2D leaves the ground, wait briefly before removing their ability to jump
+                Invoke("DisableJump", coyoteTime);
             }
 
             ReSyncRealPosition();
 
             // --- MAGENTA SURFACE COLLISION --- //
+            // If Player2D touches a magenta surface or exits the screen, send Player2D back to their last safe position
             if (GetScaledCollision(seenMarker.transform.position) == "SurfaceMagenta" || !IsPlayerOnScreen())
             {
                 ReSyncSeenPosition();
@@ -204,7 +218,7 @@ public class Player2DController : MonoBehaviour
 
     void SwitchPerspectives()
     {
-        if (modeIs3D)
+        if (modeIs3D) // If the player is switching from 3D to 2D
         {
             // Make sure Player2D is on screen
             if (IsPlayerOnScreen())
@@ -217,8 +231,13 @@ public class Player2DController : MonoBehaviour
                 }
             }
         }
-        else
+        else // If the player is switching from 2D to 3D
         {
+            if (FindSurfaceTypeAtPoint(transform.position) == "EntryZone")
+            {
+                EnterLevel();
+            }
+
             transform.position = FindClosestPoint(seenMarker.transform.position, true);
             modeIs3D = true;
             onFloor = false;
@@ -226,6 +245,26 @@ public class Player2DController : MonoBehaviour
 
         // Reset Player2D's Y-velocity
         velocityY = 0.0f;
+    }
+
+    void EnterLevel()
+    {
+        // Do a Linecast between the camera and Player2D, then return the first GameObject hit by the Linecast
+        Physics.Linecast(Camera.main.transform.position, transform.position, out RaycastHit hit);
+
+        if (hit.collider.CompareTag("EntryZone"))
+        {
+            string levelName = hit.collider.gameObject.GetComponent<EnterLevel>().levelName;
+
+            if (SceneManager.GetSceneByName(levelName) == null)
+            {
+                Debug.Log($"Level \"{levelName}\" does not exist.");
+            }
+            else
+            {
+                SceneManager.LoadScene(levelName, LoadSceneMode.Single);
+            }
+        }
     }
 
     void ReSyncRealPosition()
@@ -306,6 +345,7 @@ public class Player2DController : MonoBehaviour
 
     string GetScaledCollision(Vector3 basePos)
     {
+        /*
         Vector3[] localDirs = new Vector3[]
         {
             Vector3.zero,
@@ -313,6 +353,20 @@ public class Player2DController : MonoBehaviour
             -transform.right,
             transform.up,
             -transform.up
+        };
+        */
+
+        Vector3[] localDirs = new Vector3[]
+        {
+            Vector3.zero,
+            transform.right,
+            transform.right + transform.up,
+            transform.up,
+            -transform.right + transform.up,
+            -transform.right,
+            -transform.right - transform.up,
+            -transform.up,
+            transform.right - transform.up
         };
 
         string[] collidingSurfaceTypes = new string[localDirs.Length];
@@ -470,9 +524,9 @@ public class Player2DController : MonoBehaviour
                 {
                     onFloor = true;
 
-                    if (IsInvoking("CoyoteTime"))
+                    if (IsInvoking("DisableJump"))
                     {
-                        CancelInvoke("CoyoteTime");
+                        CancelInvoke("DisableJump");
                     }
                 }
             }
@@ -536,7 +590,8 @@ public class Player2DController : MonoBehaviour
     }
     */
 
-    void CoyoteTime()
+    // Removes the player's ability to jump after a set amount of time
+    void DisableJump()
     {
         onFloor = false;
     }

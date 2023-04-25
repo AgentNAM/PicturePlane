@@ -8,6 +8,8 @@ TagManager:
   - SurfaceGreen
   - SurfaceMagenta
   - CameraScreenArea
+  - Goal
+  - EntryZone
   layers:
   - Default
   - TransparentFX
