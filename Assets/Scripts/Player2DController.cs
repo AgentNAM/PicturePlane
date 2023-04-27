@@ -14,7 +14,7 @@ public class Player2DController : MonoBehaviour
     public Material unobstructedView;
     public Material obstructedView;
 
-    public bool modeIs3D = true;
+    public bool modeIs3D = false;
 
     private float horizontalInput;
 
@@ -33,6 +33,9 @@ public class Player2DController : MonoBehaviour
 
     private Vector3 lastSafePos;
 
+    private Vector3 anchorPos;
+    private Vector3 anchorDir;
+
     private float lcForwardInterval = 1.0f;
     private float lcBackwardInterval = 0.1f;
 
@@ -44,6 +47,7 @@ public class Player2DController : MonoBehaviour
     void Start()
     {
         seenMarker.transform.localScale = new Vector3 (seenScale, seenScale, seenScale);
+        SwitchPerspectives();
     }
 
     // Update is called once per frame
@@ -70,7 +74,9 @@ public class Player2DController : MonoBehaviour
         // Indicate whether the camera's view of Player2D is obstructed
         if (modeIs3D)
         {
-            if (IsViewClear(transform.position))
+            transform.position = GetOffsetPos(anchorPos, transform.up, seenScale / 2);
+            transform.position = GetOffsetPos(transform.position, anchorDir, seenScale / 2);
+            if (IsViewClear())
             {
                 seenMarker.GetComponent<Renderer>().material = unobstructedView;
             }
@@ -124,14 +130,15 @@ public class Player2DController : MonoBehaviour
                 velocityY = jumpStrength;
                 onFloor = false;
 
-                // Disable coyote time immediately
+                // End coyote time immediately
                 if (IsInvoking("DisableJump"))
                 {
                     CancelInvoke("DisableJump");
                 }
             }
 
-            seenMarker.transform.Translate(Vector3.up * Time.deltaTime * velocityY); // Apply vertical movement
+            // Apply vertical movement
+            seenMarker.transform.Translate(Vector3.up * Time.deltaTime * velocityY);
 
             ReSyncRealPosition();
 
@@ -149,7 +156,7 @@ public class Player2DController : MonoBehaviour
                     {
                         onFloor = true;
 
-                        // Disable coyote time immediately
+                        // End coyote time immediately
                         if (IsInvoking("DisableJump"))
                         {
                             CancelInvoke("DisableJump");
@@ -176,46 +183,18 @@ public class Player2DController : MonoBehaviour
                 ReSyncSeenPosition();
                 SwitchPerspectives();
             }
-        }
-    }
 
-    bool IsPlayerOnScreen()
-    {
-        cameraScreenArea.SetActive(true);
-        bool onScreen = FindSurfaceTypeAtPoint(transform.position) == "CameraScreenArea";
-        cameraScreenArea.SetActive(false);
-        return onScreen;
-    }
-
-    bool IsViewClear(Vector3 basePos)
-    {
-        /*
-        Vector3[] localDirs = new Vector3[]
-        {
-            Vector3.zero,
-            transform.right,
-            -transform.right,
-            transform.up,
-            -transform.up
-        };
-        */
-
-        Vector3[] localDirs = new Vector3[]
-        {
-            Vector3.zero
-        };
-
-        foreach (Vector3 localDir in localDirs)
-        {
-            if (FindSurfaceTypeAtPoint(GetOffsetPos(basePos, localDir, seenScale / 2)) != null)
+            // --- GOAL LOGIC --- //
+            // If Player2D touches the goal, return to hub world
+            if (GetScaledCollision(seenMarker.transform.position) == "Goal")
             {
-                return false;
+                SwitchPerspectives();
+                SceneManager.LoadScene("Hub", LoadSceneMode.Single);
             }
         }
-
-        return true;
     }
 
+    // Switch between 2D and 3D perspectives
     void SwitchPerspectives()
     {
         if (modeIs3D) // If the player is switching from 3D to 2D
@@ -224,38 +203,97 @@ public class Player2DController : MonoBehaviour
             if (IsPlayerOnScreen())
             {
                 // Make sure the camera has an unobstructed view of Player2D
-                if (IsViewClear(transform.position))
+                if (IsViewClear())
                 {
+                    // Save the player's current position in case they die
                     lastSafePos = transform.position;
+
+                    // Switch to 2D
                     modeIs3D = false;
                 }
             }
         }
         else // If the player is switching from 2D to 3D
         {
+            // If the player is in front of a level entry zone, enter the level
             if (FindSurfaceTypeAtPoint(transform.position) == "EntryZone")
             {
                 EnterLevel();
             }
 
-            transform.position = FindClosestPoint(seenMarker.transform.position, true);
-            modeIs3D = true;
+            // Push the player back to just in front of the wall they are on
+            transform.position = FindClosestPoint(seenMarker.transform.position);
+            anchorPos = GetOffsetPos(transform.position, -transform.up, seenScale / 2);
+            Vector3 anchorPosFront = GetOffsetPos(anchorPos, -transform.forward, seenScale / 2);
+            anchorDir = (anchorPosFront - anchorPos).normalized;
+
+            // Prevent the player from saving their jump status between perspective shifts
             onFloor = false;
+
+            // Switch to 3D
+            modeIs3D = true;
         }
 
         // Reset Player2D's Y-velocity
         velocityY = 0.0f;
     }
 
+    // Check if Player2D is on screen
+    bool IsPlayerOnScreen()
+    {
+        cameraScreenArea.SetActive(true);
+        bool onScreen = FindSurfaceTypeAtPoint(transform.position) == "CameraScreenArea";
+        cameraScreenArea.SetActive(false);
+        return onScreen;
+    }
+
+    // Check if player's view of Player2D is unobstructed
+    bool IsViewClear()
+    {
+        Vector3[] localDirs = new Vector3[]
+        {
+            Vector3.zero,
+            transform.right,
+            transform.right + transform.up,
+            transform.up,
+            -transform.right + transform.up,
+            -transform.right,
+            -transform.right - transform.up,
+            -transform.up,
+            transform.right - transform.up
+        };
+
+        // For each local direction
+        foreach (Vector3 localDir in localDirs)
+        {
+            // Get the position of the player offset in the local direction (player edges and corners)
+            Vector3 offsetPos = GetOffsetPos(transform.position, localDir, seenScale / 2);
+            
+            Vector3 backDir = (offsetPos - Camera.main.transform.position).normalized;
+            Vector3 pointToCheck = offsetPos - (backDir * transform.localScale.y);
+
+            if (FindSurfaceTypeAtPoint(pointToCheck) != null)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // Enter a level
     void EnterLevel()
     {
         // Do a Linecast between the camera and Player2D, then return the first GameObject hit by the Linecast
         Physics.Linecast(Camera.main.transform.position, transform.position, out RaycastHit hit);
 
+        // If Player2D is standing in front of an entry zone
         if (hit.collider.CompareTag("EntryZone"))
         {
-            string levelName = hit.collider.gameObject.GetComponent<EnterLevel>().levelName;
+            // Get the name of the level to enter
+            string levelName = hit.collider.gameObject.GetComponent<EnterLevel>().levelToLoad.name;
 
+            // Make sure the level exists before loading the level
             if (SceneManager.GetSceneByName(levelName) == null)
             {
                 Debug.Log($"Level \"{levelName}\" does not exist.");
@@ -307,25 +345,28 @@ public class Player2DController : MonoBehaviour
         }
     }
 
-    Vector3 FindClosestPoint(Vector3 aimPos, bool pullBack = false)
+    Vector3 FindClosestPoint(Vector3 aimPos, float pullBack = 0.0f)
     {
         Vector3 castPos = aimPos;
+        Vector3 aimDir = (aimPos - Camera.main.transform.position).normalized;
 
         // Extend the cast until a surface is hit
         while (!surfaces.Contains(FindSurfaceTypeAtPoint(castPos)))
         {
-            castPos += Vector3.ClampMagnitude(aimPos - Camera.main.transform.position, lcForwardInterval);
+            castPos += Vector3.ClampMagnitude(aimDir, lcForwardInterval);
         }
 
         // Pull back until no surface is hit
         while (surfaces.Contains(FindSurfaceTypeAtPoint(castPos)))
         {
-            castPos -= Vector3.ClampMagnitude(aimPos - Camera.main.transform.position, lcBackwardInterval);
+            castPos -= Vector3.ClampMagnitude(aimDir, lcBackwardInterval);
         }
 
-        if (!pullBack)
+        castPos += Vector3.ClampMagnitude(aimDir, lcBackwardInterval);
+
+        if (pullBack > 0.0f)
         {
-            castPos += Vector3.ClampMagnitude(aimPos - Camera.main.transform.position, lcBackwardInterval);
+            castPos -= Vector3.ClampMagnitude(aimDir, pullBack);
         }
 
         return castPos;
@@ -376,8 +417,6 @@ public class Player2DController : MonoBehaviour
             Vector3 localDir = localDirs[i];
             collidingSurfaceTypes[i] = FindOffsetSurfaceType(basePos, localDir, seenScale / 2);
         }
-
-        // Debug.Log(String.Join(' ', collidingSurfaceTypes));
 
         string prioritizedSurfaceType = GetPrioritizedSurfaceType(collidingSurfaceTypes);
 
