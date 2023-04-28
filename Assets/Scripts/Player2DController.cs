@@ -34,7 +34,6 @@ public class Player2DController : MonoBehaviour
     private Vector3 lastSafePos;
 
     private Vector3 anchorPos;
-    private Vector3 anchorDir;
 
     private float lcForwardInterval = 1.0f;
     private float lcBackwardInterval = 0.1f;
@@ -67,15 +66,11 @@ public class Player2DController : MonoBehaviour
         // Set position of seenMarker
         seenMarker.transform.position = RealToSeen(transform.position) + Camera.main.transform.position;
 
-        // Set Player2D scale relative to its distance from the camera
-        float realScale = SeenToReal(seenScale, transform.position);
-        transform.localScale = new Vector3(realScale, realScale, realScale);
-
         // Indicate whether the camera's view of Player2D is obstructed
         if (modeIs3D)
         {
-            transform.position = GetOffsetPos(anchorPos, transform.up, seenScale / 2);
-            transform.position = GetOffsetPos(transform.position, anchorDir, seenScale / 2);
+            PushPlayer2DBack();
+
             if (IsViewClear())
             {
                 seenMarker.GetComponent<Renderer>().material = unobstructedView;
@@ -85,6 +80,10 @@ public class Player2DController : MonoBehaviour
                 seenMarker.GetComponent<Renderer>().material = obstructedView;
             }
         }
+
+        // Set Player2D scale relative to its distance from the camera
+        float realScale = SeenToReal(seenScale, transform.position);
+        transform.localScale = new Vector3(realScale, realScale, realScale);
 
         // --- 2D MOVEMENT --- //
         if (!modeIs3D)
@@ -223,9 +222,8 @@ public class Player2DController : MonoBehaviour
 
             // Push the player back to just in front of the wall they are on
             transform.position = FindClosestPoint(seenMarker.transform.position);
+            
             anchorPos = GetOffsetPos(transform.position, -transform.up, seenScale / 2);
-            Vector3 anchorPosFront = GetOffsetPos(anchorPos, -transform.forward, seenScale / 2);
-            anchorDir = (anchorPosFront - anchorPos).normalized;
 
             // Prevent the player from saving their jump status between perspective shifts
             onFloor = false;
@@ -250,6 +248,46 @@ public class Player2DController : MonoBehaviour
     // Check if player's view of Player2D is unobstructed
     bool IsViewClear()
     {
+        /*
+        Vector3[] localDirs = new Vector3[]
+        {
+            Vector3.zero,
+            transform.right,
+            transform.right + transform.up,
+            transform.up,
+            -transform.right + transform.up,
+            -transform.right,
+            -transform.right - transform.up,
+            -transform.up,
+            transform.right - transform.up
+        };
+        */
+
+        Vector3[] localDirs = new Vector3[]
+        {
+            Vector3.zero
+        };
+
+        // For each local direction
+        foreach (Vector3 localDir in localDirs)
+        {
+            // Get the position of the player offset in the local direction (player edges and corners)
+            Vector3 offsetPos = GetOffsetPos(transform.position, localDir, seenScale / 2);
+
+            Vector3 backDir = (offsetPos - Camera.main.transform.position).normalized;
+            Vector3 pointToCheck = offsetPos - (backDir * transform.localScale.y);
+
+            if (FindSurfaceTypeAtPoint(pointToCheck) != null)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    void PushPlayer2DBack()
+    {
         Vector3[] localDirs = new Vector3[]
         {
             Vector3.zero,
@@ -263,22 +301,52 @@ public class Player2DController : MonoBehaviour
             transform.right - transform.up
         };
 
-        // For each local direction
-        foreach (Vector3 localDir in localDirs)
-        {
-            // Get the position of the player offset in the local direction (player edges and corners)
-            Vector3 offsetPos = GetOffsetPos(transform.position, localDir, seenScale / 2);
-            
-            Vector3 backDir = (offsetPos - Camera.main.transform.position).normalized;
-            Vector3 pointToCheck = offsetPos - (backDir * transform.localScale.y);
+        // Reset Player2D position
+        transform.position = anchorPos;
+        Vector3 footPos = transform.position;
+        transform.position = GetOffsetPos(footPos, transform.up, seenScale / 2);
 
-            if (FindSurfaceTypeAtPoint(pointToCheck) != null)
+        bool playerIsInsideWall = true;
+
+        while (playerIsInsideWall)
+        {
+            playerIsInsideWall = false;
+            foreach (Vector3 localDir in localDirs)
             {
-                return false;
+                Vector3 offsetPosNorm = GetOffsetPos(transform.position, localDir, seenScale / 2);
+                Vector3 offsetPosAnti = GetOffsetPos(transform.position, -localDir, seenScale / 2);
+                Physics.Linecast(offsetPosNorm, offsetPosAnti, out RaycastHit hit);
+
+                bool pointIsInsideWall = true;
+
+                while (pointIsInsideWall)
+                {
+                    if (hit.collider == null)
+                    {
+                        pointIsInsideWall = false;
+                    }
+                    else if (!surfaces.Contains(hit.collider.tag))
+                    {
+                        pointIsInsideWall = false;
+                    }
+                    else
+                    {
+                        playerIsInsideWall = true;
+
+                        Vector3 backDir = (Camera.main.transform.position - footPos).normalized;
+
+                        transform.position = footPos;
+                        transform.Translate(backDir * Time.deltaTime * lcBackwardInterval, Space.World);
+                        footPos = transform.position;
+                        transform.position = GetOffsetPos(footPos, transform.up, seenScale / 2);
+
+                        offsetPosNorm = GetOffsetPos(transform.position, localDir, seenScale / 2);
+                        offsetPosAnti = GetOffsetPos(transform.position, -localDir, seenScale / 2);
+                        Physics.Linecast(offsetPosNorm, offsetPosAnti, out hit);
+                    }
+                }
             }
         }
-
-        return true;
     }
 
     // Enter a level
@@ -362,12 +430,7 @@ public class Player2DController : MonoBehaviour
             castPos -= Vector3.ClampMagnitude(aimDir, lcBackwardInterval);
         }
 
-        castPos += Vector3.ClampMagnitude(aimDir, lcBackwardInterval);
-
-        if (pullBack > 0.0f)
-        {
-            castPos -= Vector3.ClampMagnitude(aimDir, pullBack);
-        }
+        castPos += Vector3.ClampMagnitude(aimDir, lcBackwardInterval - pullBack);
 
         return castPos;
     }
