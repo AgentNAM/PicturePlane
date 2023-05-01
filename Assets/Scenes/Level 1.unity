@@ -431,18 +431,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    - target: {fileID: 4253916139728035960, guid: 2834bddf3bce51b42b498635ae88267f, type: 3}
-      propertyPath: m_Enabled
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4253916139728035962, guid: 2834bddf3bce51b42b498635ae88267f, type: 3}
-      propertyPath: m_TagString
-      value: Untagged
-      objectReference: {fileID: 0}
-    - target: {fileID: 4253916139728035967, guid: 2834bddf3bce51b42b498635ae88267f, type: 3}
-      propertyPath: obstructedView
-      value: 
-      objectReference: {fileID: 2100000, guid: d3cfbf6449c5cb542a1ca73ea5e435d2, type: 2}
     - target: {fileID: 4253916140241248143, guid: 2834bddf3bce51b42b498635ae88267f, type: 3}
       propertyPath: sensitivityX
       value: 150

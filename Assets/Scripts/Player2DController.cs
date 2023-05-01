@@ -14,7 +14,7 @@ public class Player2DController : MonoBehaviour
     public Material unobstructedView;
     public Material obstructedView;
 
-    public bool modeIs3D = false;
+    public bool modeIs3D = true;
 
     private float horizontalInput;
 
@@ -46,7 +46,10 @@ public class Player2DController : MonoBehaviour
     void Start()
     {
         seenMarker.transform.localScale = new Vector3 (seenScale, seenScale, seenScale);
-        SwitchPerspectives();
+        
+        // Push the player back to just in front of the wall they are on
+        transform.position = FindClosestPoint(seenMarker.transform.position);
+        anchorPos = GetOffsetPos(transform.position, -transform.up, seenScale / 2);
     }
 
     // Update is called once per frame
@@ -359,7 +362,7 @@ public class Player2DController : MonoBehaviour
         if (hit.collider.CompareTag("EntryZone"))
         {
             // Get the name of the level to enter
-            string levelName = hit.collider.gameObject.GetComponent<EnterLevel>().levelToLoad.name;
+            string levelName = hit.collider.gameObject.GetComponent<EnterLevel>().levelName;
 
             // Make sure the level exists before loading the level
             if (SceneManager.GetSceneByName(levelName) == null)

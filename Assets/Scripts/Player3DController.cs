@@ -42,47 +42,6 @@ public class Player3DController : MonoBehaviour
             moveDir.y = player3DRb.velocity.y;
 
             player3DRb.velocity = moveDir;
-
-
-
-            // inputDir.Normalize();
-
-            // Move 3D player based on WASD input
-            // TODO: Try to implement player3DRb.AddForce()
-            // TODO: Make gravity & smooth movement work
-            /*
-            player3DRb.AddForce(transform.right * inputX * speed, ForceMode.VelocityChange);
-            player3DRb.AddForce(transform.forward * inputZ * speed, ForceMode.VelocityChange);
-            */
-
-            // Vector3 transformDir = (transform.right + transform.forward).normalized;
-            // Vector3 forceDir = new Vector3(transformDir.x * inputX, 0, transformDir.z * inputZ);
-            /*
-            if (new Vector2(player3DRb.velocity.x, player3DRb.velocity.z).magnitude < maxSpeed)
-            {
-                player3DRb.AddRelativeForce(inputDir * moveForce);
-            }
-
-            if (inputDir.magnitude == 0)
-            {
-                player3DRb.velocity *= 0.75f;
-            }
-            */
-            // player3DRb.AddForce(forceDir * speed, ForceMode.VelocityChange);
-
-            /*
-            Vector3 forceX = transform.right * inputX;
-            Vector3 forceZ = transform.forward * inputZ;
-
-            Vector3 totalForce = (forceX + forceZ).normalized * speed;
-            player3DRb.velocity = new Vector3(totalForce.x, player3DRb.velocity.y, totalForce.z);
-            */
-            // player3DRb.velocity = player3DRb.velocity.normalized * speed;
-
-            /*
-            transform.Translate(inputZ * speed * Time.deltaTime * Vector3.forward);
-            transform.Translate(inputX * speed * Time.deltaTime * Vector3.right);
-            */
         }
         else
         {

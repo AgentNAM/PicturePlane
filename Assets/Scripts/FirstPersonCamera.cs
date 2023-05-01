@@ -24,6 +24,7 @@ public class FirstPersonCamera : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        transform.rotation = transform.localRotation;
     }
 
     // Update is called once per frame
