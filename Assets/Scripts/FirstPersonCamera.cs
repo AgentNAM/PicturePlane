@@ -12,25 +12,23 @@ public class FirstPersonCamera : MonoBehaviour
     public float sensitivityX;
     public float sensitivityY;
 
+    private PlayerStateManager playerStateManager;
+
     private float xRotation;
     private float yRotation;
-
-    private Player2DController player2DControllerScript;
 
     // Start is called before the first frame update
     void Start()
     {
-        player2DControllerScript = GameObject.Find("Player2DRealMarker").GetComponent<Player2DController>();
+        playerStateManager = GameObject.Find("PlayerStateManager").GetComponent<PlayerStateManager>();
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
         transform.rotation = transform.localRotation;
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (player2DControllerScript.modeIs3D)
+        if (playerStateManager.modeIs3D)
         {
             // Get mouse input
             float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensitivityX;

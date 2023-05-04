@@ -210,10 +210,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    - target: {fileID: 4253916139728035960, guid: 2834bddf3bce51b42b498635ae88267f, type: 3}
-      propertyPath: m_Enabled
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2834bddf3bce51b42b498635ae88267f, type: 3}
 --- !u!1001 &522723655
@@ -229,7 +225,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 941983604852232643, guid: 20822049abedf374e9174fdc4abacc2e, type: 3}
       propertyPath: m_LocalScale.x
-      value: 15.5
+      value: 15.1
       objectReference: {fileID: 0}
     - target: {fileID: 941983604852232643, guid: 20822049abedf374e9174fdc4abacc2e, type: 3}
       propertyPath: m_LocalScale.y
@@ -237,7 +233,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 941983604852232643, guid: 20822049abedf374e9174fdc4abacc2e, type: 3}
       propertyPath: m_LocalScale.z
-      value: 1
+      value: 0.55
       objectReference: {fileID: 0}
     - target: {fileID: 941983604852232643, guid: 20822049abedf374e9174fdc4abacc2e, type: 3}
       propertyPath: m_LocalPosition.x
@@ -796,12 +792,12 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3051342713657928382, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
       propertyPath: levelName
-      value: Level 2
+      value: uhhhhhh
       objectReference: {fileID: 0}
     - target: {fileID: 3051342713657928382, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
-      propertyPath: levelToLoad
-      value: 
-      objectReference: {fileID: 102900000, guid: 2462c4c520b77444a826d157f6399c29, type: 3}
+      propertyPath: sceneName
+      value: Level 2
+      objectReference: {fileID: 0}
     - target: {fileID: 3051342714904516130, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
       propertyPath: m_RootOrder
       value: 6
@@ -1189,6 +1185,10 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3051342713657928382, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
       propertyPath: levelName
+      value: The Pedestal
+      objectReference: {fileID: 0}
+    - target: {fileID: 3051342713657928382, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
+      propertyPath: sceneName
       value: Level 1
       objectReference: {fileID: 0}
     - target: {fileID: 3051342714904516130, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
@@ -1237,7 +1237,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3051342714904516131, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
       propertyPath: m_Name
-      value: LevelEntry
+      value: LevelEntry (The Pedestal)
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
