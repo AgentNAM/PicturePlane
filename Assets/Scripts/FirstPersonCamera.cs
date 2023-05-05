@@ -22,7 +22,8 @@ public class FirstPersonCamera : MonoBehaviour
     {
         playerStateManager = GameObject.Find("PlayerStateManager").GetComponent<PlayerStateManager>();
 
-        transform.rotation = transform.localRotation;
+        xRotation = transform.rotation.x;
+        yRotation = transform.rotation.y;
     }
 
     // Update is called once per frame

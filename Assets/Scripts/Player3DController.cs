@@ -35,13 +35,17 @@ public class Player3DController : MonoBehaviour
             // Get WASD input
             inputX = Input.GetAxis("Horizontal");
             inputZ = Input.GetAxis("Vertical");
+
+            // Get input direction
             Vector3 inputDir = new Vector3(inputX, 0, inputZ);
             inputDir = Vector3.ClampMagnitude(inputDir, 1);
 
+            // Get movement vector
             Vector3 moveDir = (transform.right * inputDir.x) + (transform.forward * inputDir.z);
             moveDir *= speed;
             moveDir.y = player3DRb.velocity.y;
 
+            // Move player
             player3DRb.velocity = moveDir;
         }
         else

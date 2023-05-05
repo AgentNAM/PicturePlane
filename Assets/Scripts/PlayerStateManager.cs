@@ -3,17 +3,21 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 public class PlayerStateManager : MonoBehaviour
 {
     public GameObject pauseMenu;
     public GameObject screenBorderHolder;
+    public TextMeshProUGUI warningText;
 
     public Material borderMaterial3D;
     public Material borderMaterial2D;
 
     public bool modeIs3D = true;
     public bool paused = false;
+
+    private float warningTime = 5.0f;
 
     // Start is called before the first frame update
     void Start()
@@ -41,11 +45,34 @@ public class PlayerStateManager : MonoBehaviour
         }
     }
 
+    public void SetWarning(string message)
+    {
+        StartCoroutine(ShowWarning(message));
+    }
+
+    IEnumerator ShowWarning(string message)
+    {
+        warningText.gameObject.SetActive(true);
+        warningText.text = message;
+
+        yield return new WaitForSeconds(warningTime);
+
+        warningText.gameObject.SetActive(false);
+
+        /*
+        warningText.SetActive(true);
+        warningText.AddComponent<TextMeshPro>();
+        warningText.GetComponent<TextMeshPro>().text = message;
+
+        yield return new WaitForSeconds(warningTime);
+
+        warningText.SetActive(false);
+        */
+    }
+
     // Change screen border transparency depending on current perspective mode
     public void UpdateScreenBorderMaterial()
     {
-        // GameObject[] screenBorders = screenBorderHolder.GetComponentsInChildren<GameObject>();
-        // GameObject[] screenBorders = 
         Transform[] screenBorders = Array.FindAll(screenBorderHolder.GetComponentsInChildren<Transform>(), child => child != screenBorderHolder.transform);
 
         foreach (Transform screenBorder in screenBorders)
