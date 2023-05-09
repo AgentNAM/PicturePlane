@@ -20,7 +20,7 @@ public class TitleScreenManager : MonoBehaviour
 
     public void NewGame()
     {
-        SceneManager.LoadScene("Hub");
+        SceneManager.LoadSceneAsync("Hub");
     }
 
     public void QuitGame()

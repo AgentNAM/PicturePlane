@@ -22,10 +22,7 @@ public class PlayerStateManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        paused = false;
+        ResumeGame();
     }
 
     // Update is called once per frame
@@ -45,12 +42,7 @@ public class PlayerStateManager : MonoBehaviour
         }
     }
 
-    public void SetWarning(string message)
-    {
-        StartCoroutine(ShowWarning(message));
-    }
-
-    IEnumerator ShowWarning(string message)
+    public IEnumerator ShowWarning(string message)
     {
         warningText.gameObject.SetActive(true);
         warningText.text = message;
@@ -58,16 +50,6 @@ public class PlayerStateManager : MonoBehaviour
         yield return new WaitForSeconds(warningTime);
 
         warningText.gameObject.SetActive(false);
-
-        /*
-        warningText.SetActive(true);
-        warningText.AddComponent<TextMeshPro>();
-        warningText.GetComponent<TextMeshPro>().text = message;
-
-        yield return new WaitForSeconds(warningTime);
-
-        warningText.SetActive(false);
-        */
     }
 
     // Change screen border transparency depending on current perspective mode
@@ -113,20 +95,17 @@ public class PlayerStateManager : MonoBehaviour
 
     public void RestartLevel()
     {
-        ResumeGame();
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().name);
     }
 
     public void BackToHub()
     {
-        ResumeGame();
-        SceneManager.LoadScene("Hub");
+        SceneManager.LoadSceneAsync("Hub");
     }
 
     public void BackToMainMenu()
     {
-        ResumeGame();
-        SceneManager.LoadScene("Title Screen");
+        SceneManager.LoadSceneAsync("Title Screen");
     }
 
     public void QuitGame()

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using UnityEditor.VersionControl;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -58,7 +59,6 @@ public class Player2DController : MonoBehaviour
         seenMarker.transform.rotation = Camera.main.transform.rotation;
 
         // Set position of seenMarker
-        // seenMarker.transform.position = RealToSeen(transform.position) + Camera.main.transform.position;
         Vector3 seenStartOffset1 = Camera.main.transform.forward * seenCamDistance;
         Vector3 seenStartOffset2 = Camera.main.transform.up * seenScale / 2;
         seenMarker.transform.position = Camera.main.transform.position + seenStartOffset1 + seenStartOffset2;
@@ -68,7 +68,7 @@ public class Player2DController : MonoBehaviour
         anchorPos = GetOffsetPos(transform.position, -transform.up, seenScale / 2);
 
         // Save the player's current position in case they die
-        lastSafePos = transform.position;
+        lastSafePos = anchorPos;
 
         playerStateManager.UpdateScreenBorderMaterial();
     }
@@ -78,7 +78,7 @@ public class Player2DController : MonoBehaviour
     {
         // --- PERSPECTIVE SWITCHING --- //
         // Check if the player presses E
-        if (Input.GetKeyDown(KeyCode.E))
+        if (Input.GetKeyDown(KeyCode.E) && !isRespawning)
         {
             SwitchPerspectives();
         }
@@ -110,7 +110,7 @@ public class Player2DController : MonoBehaviour
         transform.localScale = new Vector3(realScale, realScale, realScale);
 
         // --- 2D MOVEMENT --- //
-        if (!playerStateManager.modeIs3D)
+        if (!playerStateManager.modeIs3D && !isRespawning)
         {
             // Push Player2D back to the surface closest to Player3D
             ReSyncRealPosition();
@@ -228,9 +228,6 @@ public class Player2DController : MonoBehaviour
                 {
                     if (onFloor)
                     {
-                        // Save the player's current position in case they die
-                        lastSafePos = transform.position;
-
                         // Prevent the player from saving their jump status between perspective shifts
                         onFloor = false;
                     }
@@ -240,12 +237,12 @@ public class Player2DController : MonoBehaviour
                 }
                 else
                 {
-                    playerStateManager.SetWarning("Warning: 2D Avatar is obscured!");
+                    StartCoroutine(playerStateManager.ShowWarning("Warning: 2D Avatar is obscured!"));
                 }
             }
             else
             {
-                playerStateManager.SetWarning("Warning: 2D Avatar is not on-screen!");
+                StartCoroutine(playerStateManager.ShowWarning("Warning: 2D Avatar is not on-screen!"));
             }
         }
         else // If the player is switching from 2D to 3D
@@ -259,8 +256,10 @@ public class Player2DController : MonoBehaviour
 
             // Push the player back to just in front of the wall they are on
             transform.position = FindClosestPoint(seenMarker.transform.position, lcBackwardInterval);
-            
             anchorPos = GetOffsetPos(transform.position, -transform.up, seenScale / 2);
+
+            // Save the player's current position in case they die
+            lastSafePos = anchorPos;
 
             // Switch to 3D
             playerStateManager.modeIs3D = true;
@@ -309,8 +308,9 @@ public class Player2DController : MonoBehaviour
             if (FindSurfaceTypeAtPoint(pointToCheck) != null)
             {
                 if (FindSurfaceTypeAtPoint(pointToCheck) == "SurfaceMagenta" || localDir == Vector3.zero)
-
-                return false;
+                {
+                    return false;
+                }
             }
         }
 
@@ -546,19 +546,24 @@ public class Player2DController : MonoBehaviour
     {
         isRespawning = true;
 
-        seenMarker.GetComponent<Renderer>().enabled = false;
-
-        deathParticle.transform.position = transform.position;
-        deathParticle.transform.localScale = transform.localScale;
         deathParticle.Play();
+
+        seenMarker.GetComponent<Renderer>().enabled = false;
 
         yield return new WaitForSeconds(respawnTime);
 
+        // Reset the player to the last position where they were safe
+        anchorPos = lastSafePos;
+        transform.position = GetOffsetPos(anchorPos, transform.up, seenScale / 2);
+
+        seenMarker.transform.position = RealToSeen(transform.position) + Camera.main.transform.position;
+
+        /*
         seenMarker.transform.position = RealToSeen(lastSafePos) + Camera.main.transform.position;
 
-        // Push the player back to just in front of the wall they are on
-        transform.position = FindClosestPoint(seenMarker.transform.position, lcBackwardInterval);
+        transform.position = lastSafePos;
         anchorPos = GetOffsetPos(transform.position, -transform.up, seenScale / 2);
+        */
 
         // Switch to 3D
         playerStateManager.modeIs3D = true;
