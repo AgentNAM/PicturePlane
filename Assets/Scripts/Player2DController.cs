@@ -558,13 +558,6 @@ public class Player2DController : MonoBehaviour
 
         seenMarker.transform.position = RealToSeen(transform.position) + Camera.main.transform.position;
 
-        /*
-        seenMarker.transform.position = RealToSeen(lastSafePos) + Camera.main.transform.position;
-
-        transform.position = lastSafePos;
-        anchorPos = GetOffsetPos(transform.position, -transform.up, seenScale / 2);
-        */
-
         // Switch to 3D
         playerStateManager.modeIs3D = true;
 
