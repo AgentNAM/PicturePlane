@@ -1441,7 +1441,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3051342713657928382, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
       propertyPath: levelName
-      value: Planetarium
+      value: Pink Planetarium
       objectReference: {fileID: 0}
     - target: {fileID: 3051342713657928382, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
       propertyPath: sceneName
@@ -1493,7 +1493,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3051342714904516131, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}
       propertyPath: m_Name
-      value: LevelEntry (Planetarium)
+      value: LevelEntry (Pink Planetarium)
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 510d8cbed1e1edf45aa13f7e29b27e9a, type: 3}

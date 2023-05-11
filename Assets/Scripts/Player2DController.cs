@@ -24,6 +24,14 @@ public class Player2DController : MonoBehaviour
 
     private float horizontalInput;
 
+    private float velocityY;
+
+    private float seenScale = 0.02f;
+    private float seenCamDistance = 1.0f;
+
+    private float lcForwardInterval = 1.0f;
+    private float lcBackwardInterval = 0.1f;
+
     private float speed = 0.35f;
     private float gravity = 2.5f;
     private float jumpStrength = 0.75f;
@@ -33,17 +41,9 @@ public class Player2DController : MonoBehaviour
     private float maxWalkSlope = 0.15f;
     private float maxSlideSlope = 0.075f;
 
-    private float velocityY;
-
-    private float seenScale = 0.02f;
-    private float seenCamDistance = 1.0f;
-
     private Vector3 lastSafePos;
 
     private Vector3 anchorPos;
-
-    private float lcForwardInterval = 1.0f;
-    private float lcBackwardInterval = 0.1f;
 
     private readonly string[] surfaces = new string[] { "SurfaceGray", "EntryZone", "SurfaceGreen", "SurfaceMagenta", "Goal" };
 
@@ -76,141 +76,145 @@ public class Player2DController : MonoBehaviour
     // Update is called once per frame
     void LateUpdate()
     {
-        // --- PERSPECTIVE SWITCHING --- //
-        // Check if the player presses E
-        if (Input.GetKeyDown(KeyCode.E) && !isRespawning)
+        if (!playerStateManager.paused)
         {
-            SwitchPerspectives();
-        }
-
-        // Set Player2D rotation and seenMarker rotation to face the camera
-        transform.rotation = Camera.main.transform.rotation;
-        seenMarker.transform.rotation = Camera.main.transform.rotation;
-
-        // Set position of seenMarker
-        seenMarker.transform.position = RealToSeen(transform.position) + Camera.main.transform.position;
-
-        // Indicate whether the camera's view of Player2D is obstructed
-        if (playerStateManager.modeIs3D)
-        {
-            PushPlayer2DBack();
-
-            if (IsViewClear())
+            // --- PERSPECTIVE SWITCHING --- //
+            // Check if the player presses E
+            if (Input.GetKeyDown(KeyCode.E) && !isRespawning)
             {
-                seenMarker.GetComponent<Renderer>().material = unobstructedView;
+                SwitchPerspectives();
             }
-            else
+
+            // Set Player2D rotation and seenMarker rotation to face the camera
+            transform.rotation = Camera.main.transform.rotation;
+            seenMarker.transform.rotation = Camera.main.transform.rotation;
+
+            // Set position of seenMarker
+            seenMarker.transform.position = RealToSeen(transform.position) + Camera.main.transform.position;
+
+            // Indicate whether the camera's view of Player2D is obstructed
+            if (playerStateManager.modeIs3D)
             {
-                seenMarker.GetComponent<Renderer>().material = obstructedView;
-            }
-        }
+                PushPlayer2DBack();
 
-        // Set Player2D scale relative to its distance from the camera
-        float realScale = SeenToReal(seenScale, transform.position);
-        transform.localScale = new Vector3(realScale, realScale, realScale);
-
-        // --- 2D MOVEMENT --- //
-        if (!playerStateManager.modeIs3D && !isRespawning)
-        {
-            // Push Player2D back to the surface closest to Player3D
-            ReSyncRealPosition();
-
-            // --- HORIZONTAL MOVEMENT --- //
-            Vector3 lastSeenPos = seenMarker.transform.position; // Get Player2D's position before moving horizontally
-
-            horizontalInput = Input.GetAxisRaw("Horizontal"); // Get horizontal input
-
-            seenMarker.transform.Translate(Vector3.right * Time.deltaTime * speed * horizontalInput); // Apply horizontal movement
-
-            ReSyncRealPosition();
-
-            // Check if Player2D's new position is inside a green surface
-            if (GetScaledCollision(seenMarker.transform.position) == "SurfaceGreen")
-            {
-                // If Player2D is colliding with a sloped floor/ceiling, allow them to move along the slope
-                MoveAlongSlope(Vector3.up, maxWalkSlope, out bool isSlope);
-
-                // If Player2D is colliding with a wall, reset their position
-                if (!isSlope) {
-                    seenMarker.transform.position = lastSeenPos;
+                if (IsViewClear())
+                {
+                    seenMarker.GetComponent<Renderer>().material = unobstructedView;
+                }
+                else
+                {
+                    seenMarker.GetComponent<Renderer>().material = obstructedView;
                 }
             }
 
-            ReSyncRealPosition();
+            // Set Player2D scale relative to its distance from the camera
+            float realScale = SeenToReal(seenScale, transform.position);
+            transform.localScale = new Vector3(realScale, realScale, realScale);
 
-            // --- VERTICAL MOVEMENT --- //
-            lastSeenPos = seenMarker.transform.position; // Get Player2D's position before moving vertically
-
-            // Player2D accelerates downwards
-            if (velocityY > -maxFallSpeed)
+            // --- 2D MOVEMENT --- //
+            if (!playerStateManager.modeIs3D && !isRespawning)
             {
-                velocityY -= gravity * Time.deltaTime;
-            }
+                // Push Player2D back to the surface closest to Player3D
+                ReSyncRealPosition();
 
-            // If Player2D is on the floor and the player presses W, jump
-            if (Input.GetButtonDown("Jump") && onFloor)
-            {
-                velocityY = jumpStrength;
-                onFloor = false;
+                // --- HORIZONTAL MOVEMENT --- //
+                Vector3 lastSeenPos = seenMarker.transform.position; // Get Player2D's position before moving horizontally
 
-                // End coyote time immediately
-                if (IsInvoking("DisableJump"))
+                horizontalInput = Input.GetAxisRaw("Horizontal"); // Get horizontal input
+
+                seenMarker.transform.Translate(Vector3.right * Time.deltaTime * speed * horizontalInput); // Apply horizontal movement
+
+                ReSyncRealPosition();
+
+                // Check if Player2D's new position is inside a green surface
+                if (GetScaledCollision(seenMarker.transform.position) == "SurfaceGreen")
                 {
-                    CancelInvoke("DisableJump");
-                }
-            }
+                    // If Player2D is colliding with a sloped floor/ceiling, allow them to move along the slope
+                    MoveAlongSlope(Vector3.up, maxWalkSlope, out bool isSlope);
 
-            // Apply vertical movement
-            seenMarker.transform.Translate(Vector3.up * Time.deltaTime * velocityY);
-
-            ReSyncRealPosition();
-
-            // Check if Player2D's new position is inside a green surface
-            if (GetScaledCollision(seenMarker.transform.position) == "SurfaceGreen")
-            {
-                // If Player2D is colliding with a sloped wall, allow them to move along the slope
-                MoveAlongSlope(Vector3.right, maxSlideSlope, out bool isSlope);
-
-                // If Player2D is colliding with a floor/ceiling...
-                if (!isSlope)
-                {
-                    // Check if Player2D is colliding with a floor
-                    if (GetScaledCollision(GetOffsetPos(seenMarker.transform.position, -transform.up, seenScale / 2)) == "SurfaceGreen")
+                    // If Player2D is colliding with a wall, reset their position
+                    if (!isSlope)
                     {
-                        onFloor = true;
-
-                        // End coyote time immediately
-                        if (IsInvoking("DisableJump"))
-                        {
-                            CancelInvoke("DisableJump");
-                        }
+                        seenMarker.transform.position = lastSeenPos;
                     }
-
-                    // Reset Player2D's y-velocity and position
-                    velocityY = 0.0f;
-                    seenMarker.transform.position = lastSeenPos;
                 }
-            }
-            else
-            {
-                // When Player2D leaves the ground, wait briefly before removing their ability to jump
-                Invoke("DisableJump", coyoteTime);
-            }
 
-            ReSyncRealPosition();
+                ReSyncRealPosition();
 
-            // --- MAGENTA SURFACE COLLISION --- //
-            // If Player2D touches a magenta surface or exits the screen, send Player2D back to their last safe position
-            if (GetScaledCollision(seenMarker.transform.position) == "SurfaceMagenta" || !IsPlayerOnScreen())
-            {
-                StartCoroutine(Respawn());
-            }
+                // --- VERTICAL MOVEMENT --- //
+                lastSeenPos = seenMarker.transform.position; // Get Player2D's position before moving vertically
 
-            // --- GOAL LOGIC --- //
-            // If Player2D touches the goal, return to hub world
-            if (GetScaledCollision(seenMarker.transform.position) == "Goal")
-            {
-                SceneManager.LoadScene("Hub", LoadSceneMode.Single);
+                // Player2D accelerates downwards
+                if (velocityY > -maxFallSpeed)
+                {
+                    velocityY -= gravity * Time.deltaTime;
+                }
+
+                // If Player2D is on the floor and the player presses W, jump
+                if (Input.GetButtonDown("Jump") && onFloor)
+                {
+                    velocityY = jumpStrength;
+                    onFloor = false;
+
+                    // End coyote time immediately
+                    if (IsInvoking("DisableJump"))
+                    {
+                        CancelInvoke("DisableJump");
+                    }
+                }
+
+                // Apply vertical movement
+                seenMarker.transform.Translate(Vector3.up * Time.deltaTime * velocityY);
+
+                ReSyncRealPosition();
+
+                // Check if Player2D's new position is inside a green surface
+                if (GetScaledCollision(seenMarker.transform.position) == "SurfaceGreen")
+                {
+                    // If Player2D is colliding with a sloped wall, allow them to move along the slope
+                    MoveAlongSlope(Vector3.right, maxSlideSlope, out bool isSlope);
+
+                    // If Player2D is colliding with a floor/ceiling...
+                    if (!isSlope)
+                    {
+                        // Check if Player2D is colliding with a floor
+                        if (GetScaledCollision(GetOffsetPos(seenMarker.transform.position, -transform.up, seenScale / 2)) == "SurfaceGreen")
+                        {
+                            onFloor = true;
+
+                            // End coyote time immediately
+                            if (IsInvoking("DisableJump"))
+                            {
+                                CancelInvoke("DisableJump");
+                            }
+                        }
+
+                        // Reset Player2D's y-velocity and position
+                        velocityY = 0.0f;
+                        seenMarker.transform.position = lastSeenPos;
+                    }
+                }
+                else
+                {
+                    // When Player2D leaves the ground, wait briefly before removing their ability to jump
+                    Invoke("DisableJump", coyoteTime);
+                }
+
+                ReSyncRealPosition();
+
+                // --- MAGENTA SURFACE COLLISION --- //
+                // If Player2D touches a magenta surface or exits the screen, send Player2D back to their last safe position
+                if (GetScaledCollision(seenMarker.transform.position) == "SurfaceMagenta" || !IsPlayerOnScreen())
+                {
+                    StartCoroutine(Respawn());
+                }
+
+                // --- GOAL LOGIC --- //
+                // If Player2D touches the goal, return to hub world
+                if (GetScaledCollision(seenMarker.transform.position) == "Goal")
+                {
+                    SceneManager.LoadScene("Hub", LoadSceneMode.Single);
+                }
             }
         }
     }

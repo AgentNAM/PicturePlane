@@ -30,7 +30,7 @@ public class Player3DController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (playerStateManager.modeIs3D)
+        if (playerStateManager.modeIs3D && !playerStateManager.paused)
         {
             // Get WASD input
             inputX = Input.GetAxis("Horizontal");

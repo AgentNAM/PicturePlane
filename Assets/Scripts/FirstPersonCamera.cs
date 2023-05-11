@@ -22,28 +22,32 @@ public class FirstPersonCamera : MonoBehaviour
     {
         playerStateManager = GameObject.Find("PlayerStateManager").GetComponent<PlayerStateManager>();
 
-        xRotation = transform.rotation.x;
-        yRotation = transform.rotation.y;
+        // Prevent camera rotation from being reset
+        yRotation = transform.eulerAngles.y;
+        xRotation = (transform.eulerAngles.x + 180f) % 360f - 180f;
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (playerStateManager.modeIs3D)
+        if (!playerStateManager.paused)
         {
-            // Get mouse input
-            float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensitivityX;
-            float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensitivityY;
+            if (playerStateManager.modeIs3D)
+            {
+                // Get mouse input
+                float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensitivityX;
+                float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensitivityY;
 
-            yRotation += mouseX;
+                yRotation += mouseX;
 
-            xRotation -= mouseY;
-            xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+                xRotation -= mouseY;
+                xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
-            transform.rotation = Quaternion.Euler(xRotation, yRotation, 0);
-            player3D.transform.rotation = Quaternion.Euler(0, yRotation, 0);
+                transform.rotation = Quaternion.Euler(xRotation, yRotation, 0);
+                player3D.transform.rotation = Quaternion.Euler(0, yRotation, 0);
 
-            transform.position = player3D.transform.position;
+                transform.position = player3D.transform.position;
+            }
         }
     }
 }

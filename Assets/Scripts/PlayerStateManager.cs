@@ -42,16 +42,6 @@ public class PlayerStateManager : MonoBehaviour
         }
     }
 
-    public IEnumerator ShowWarning(string message)
-    {
-        warningText.gameObject.SetActive(true);
-        warningText.text = message;
-
-        yield return new WaitForSeconds(warningTime);
-
-        warningText.gameObject.SetActive(false);
-    }
-
     // Change screen border transparency depending on current perspective mode
     public void UpdateScreenBorderMaterial()
     {
@@ -72,25 +62,22 @@ public class PlayerStateManager : MonoBehaviour
 
     void PauseGame()
     {
+        paused = true;
+
         pauseMenu.SetActive(true);
-        Time.timeScale = 0.0f;
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-
-        paused = true;
     }
 
     public void ResumeGame()
     {
-        Time.timeScale = 1.0f;
-
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        paused = false;
 
         pauseMenu.SetActive(false);
 
-        paused = false;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     public void RestartLevel()
@@ -111,5 +98,16 @@ public class PlayerStateManager : MonoBehaviour
     public void QuitGame()
     {
         Application.Quit();
+    }
+
+    // Show warning
+    public IEnumerator ShowWarning(string message)
+    {
+        warningText.gameObject.SetActive(true);
+        warningText.text = message;
+
+        yield return new WaitForSeconds(warningTime);
+
+        warningText.gameObject.SetActive(false);
     }
 }
