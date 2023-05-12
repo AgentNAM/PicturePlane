@@ -4,17 +4,11 @@ using UnityEngine;
 
 public class MusicManager : MonoBehaviour
 {
-    /*
-    public AudioClip withBeats;
-    public AudioClip noBeats;
-    public AudioClip onlyBeats;
-    */
-
     public AudioClip backing;
     public AudioClip beats;
 
     public float maxVolume = 0.5f;
-    public float fadeTime = 1.0f;
+    public float musicFadeTime = 1.0f;
 
     private PlayerStateManager playerStateManager;
 
@@ -26,26 +20,21 @@ public class MusicManager : MonoBehaviour
     void Start()
     {
         playerStateManager = GameObject.Find("PlayerStateManager").GetComponent<PlayerStateManager>();
+
+        // Get audio sources for background music
         musicSources = GetComponents<AudioSource>();
         backingSource = musicSources[0];
         beatsSource = musicSources[1];
-        /*
-        musicSources[0].clip = withBeats;
-        musicSources[0].volume = 0;
 
-        musicSources[1].clip = noBeats;
-        musicSources[1].volume = maxVolume;
-
-        musicSources[0].Play();
-        musicSources[1].Play();
-        */
-
+        // Set backround music
         backingSource.clip = backing;
-        backingSource.volume = maxVolume;
-
         beatsSource.clip = beats;
+
+        // Set volumes for music backing and beats
+        backingSource.volume = maxVolume;
         beatsSource.volume = 0;
 
+        // Play both backing and beats at the same time
         backingSource.Play();
         beatsSource.Play();
     }
@@ -55,28 +44,41 @@ public class MusicManager : MonoBehaviour
     {
         if (playerStateManager.modeIs3D)
         {
-            // beatsSource.volume = Fade(beatsSource.volume, 0);
-            beatsSource.volume = 0;
+            // Have the beats fade out while the player is in 3D mode
+            beatsSource.volume = Fade(beatsSource.volume, 0, musicFadeTime);
         }
         else
         {
-            // beatsSource.volume = Fade(beatsSource.volume, maxVolume);
-            beatsSource.volume = maxVolume;
+            // Have the beats fade in while the player is in 2D mode
+            beatsSource.volume = Fade(beatsSource.volume, maxVolume, musicFadeTime);
         }
     }
 
-    /*
-    private float Fade(float currentVolume, float endVolume)
+    // Have one value slowly approach another over a certain amount of time
+    private float Fade(float currentValue, float endValue, float fadeTime)
     {
-        if (currentVolume < endVolume)
+        if (currentValue < endValue)
         {
-            return currentVolume + (currentVolume * Time.deltaTime / fadeTime);
+            if (currentValue + (maxVolume * Time.deltaTime / fadeTime) < endValue)
+            {
+                return currentValue + (maxVolume * Time.deltaTime / fadeTime);
+            }
+            else
+            {
+                return endValue;
+            }
         }
-        else if (currentVolume > endVolume)
+        else if (currentValue > endValue)
         {
-            return currentVolume - (currentVolume * Time.deltaTime / fadeTime);
+            if (currentValue - (maxVolume * Time.deltaTime / fadeTime) > endValue)
+            {
+                return currentValue - (maxVolume * Time.deltaTime / fadeTime);
+            }
+            else
+            {
+                return endValue;
+            }
         }
-        else return currentVolume;
+        else return currentValue;
     }
-    */
 }
