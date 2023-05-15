@@ -8,7 +8,7 @@ public class MusicManager : MonoBehaviour
     public AudioClip beats;
 
     public float maxVolume = 0.5f;
-    public float musicFadeTime = 1.0f;
+    public float musicFadeTime = 0.5f;
 
     private PlayerStateManager playerStateManager;
 

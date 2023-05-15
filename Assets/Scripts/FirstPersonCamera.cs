@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class FirstPersonCamera : MonoBehaviour
 {
-    // First-person camera code: https://www.youtube.com/watch?v=f473C43s8nE
+    // First-person camera starter code: https://www.youtube.com/watch?v=f473C43s8nE
 
     public GameObject player3D;
     public GameObject player2D;
@@ -38,14 +38,18 @@ public class FirstPersonCamera : MonoBehaviour
                 float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensitivityX;
                 float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensitivityY;
 
+                // Player can look left and right
                 yRotation += mouseX;
 
+                // Player can look up and down
                 xRotation -= mouseY;
                 xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
+                // Set camera and player rotations
                 transform.rotation = Quaternion.Euler(xRotation, yRotation, 0);
                 player3D.transform.rotation = Quaternion.Euler(0, yRotation, 0);
 
+                // Set camera position at player position
                 transform.position = player3D.transform.position;
             }
         }

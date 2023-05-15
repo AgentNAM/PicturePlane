@@ -29,7 +29,7 @@ public class PlayerStateManager : MonoBehaviour
     void Update()
     {
         // Pause game when player presses esc
-        if (Input.GetKeyDown(KeyCode.Q))
+        if (Input.GetButtonDown("Cancel"))
         {
             if (!paused)
             {
@@ -60,6 +60,18 @@ public class PlayerStateManager : MonoBehaviour
         }
     }
 
+    // Show warning (if the player tries to switch perspectives while the 2D avatar is off-screen or obstructed)
+    public IEnumerator ShowWarning(string message)
+    {
+        warningText.gameObject.SetActive(true);
+        warningText.text = message;
+
+        yield return new WaitForSeconds(warningTime);
+
+        warningText.gameObject.SetActive(false);
+    }
+
+    // Pause game
     void PauseGame()
     {
         paused = true;
@@ -70,6 +82,7 @@ public class PlayerStateManager : MonoBehaviour
         Cursor.visible = true;
     }
 
+    // Resume game
     public void ResumeGame()
     {
         paused = false;
@@ -80,34 +93,27 @@ public class PlayerStateManager : MonoBehaviour
         Cursor.visible = false;
     }
 
+    // Restart level
     public void RestartLevel()
     {
         SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().name);
     }
 
+    // Back to hub
     public void BackToHub()
     {
         SceneManager.LoadSceneAsync("Hub");
     }
 
+    // Back to main menu
     public void BackToMainMenu()
     {
         SceneManager.LoadSceneAsync("Title Screen");
     }
 
+    // Quit game
     public void QuitGame()
     {
         Application.Quit();
-    }
-
-    // Show warning
-    public IEnumerator ShowWarning(string message)
-    {
-        warningText.gameObject.SetActive(true);
-        warningText.text = message;
-
-        yield return new WaitForSeconds(warningTime);
-
-        warningText.gameObject.SetActive(false);
     }
 }

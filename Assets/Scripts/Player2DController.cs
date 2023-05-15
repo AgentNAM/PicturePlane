@@ -16,6 +16,10 @@ public class Player2DController : MonoBehaviour
 
     public ParticleSystem deathParticle;
 
+    private AudioSource playerAudioSource;
+    public AudioClip jumpSound;
+    public AudioClip deathSound;
+
     public bool onFloor = false;
     public bool isRespawning = false;
 
@@ -70,6 +74,9 @@ public class Player2DController : MonoBehaviour
         lastSafePos = anchorPos;
 
         playerStateManager.UpdateScreenBorderMaterial();
+
+        // Set up audio source
+        playerAudioSource = GetComponent<AudioSource>();
     }
 
     // Update is called once per frame
@@ -154,6 +161,9 @@ public class Player2DController : MonoBehaviour
                 {
                     velocityY = jumpStrength;
                     onFloor = false;
+
+                    playerAudioSource.clip = jumpSound;
+                    playerAudioSource.Play();
 
                     // End coyote time immediately
                     if (IsInvoking("DisableJump"))
@@ -548,6 +558,9 @@ public class Player2DController : MonoBehaviour
     IEnumerator Respawn()
     {
         isRespawning = true;
+
+        playerAudioSource.clip = deathSound;
+        playerAudioSource.Play();
 
         deathParticle.Play();
 
