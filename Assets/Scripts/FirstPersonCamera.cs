@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class FirstPersonCamera : MonoBehaviour
 {
@@ -9,8 +11,9 @@ public class FirstPersonCamera : MonoBehaviour
     public GameObject player3D;
     public GameObject player2D;
 
-    public float sensitivityX;
-    public float sensitivityY;
+    public Slider sensitivitySlider;
+    public TextMeshProUGUI sensitivityText;
+    public float sensitivity = 150.0f;
 
     private PlayerStateManager playerStateManager;
 
@@ -35,8 +38,8 @@ public class FirstPersonCamera : MonoBehaviour
             if (playerStateManager.modeIs3D)
             {
                 // Get mouse input
-                float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensitivityX;
-                float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensitivityY;
+                float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensitivity;
+                float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensitivity;
 
                 // Player can look left and right
                 yRotation += mouseX;
@@ -53,5 +56,11 @@ public class FirstPersonCamera : MonoBehaviour
                 transform.position = player3D.transform.position;
             }
         }
+    }
+
+    public void OnSensitivityChanged()
+    {
+        sensitivity = sensitivitySlider.value;
+        sensitivityText.text = "Sensitivity: " + sensitivity;
     }
 }

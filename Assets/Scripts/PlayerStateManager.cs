@@ -8,6 +8,7 @@ using TMPro;
 public class PlayerStateManager : MonoBehaviour
 {
     public GameObject pauseMenu;
+    public GameObject optionsMenu;
     public GameObject screenBorderHolder;
     public TextMeshProUGUI warningText;
 
@@ -88,6 +89,7 @@ public class PlayerStateManager : MonoBehaviour
         paused = false;
 
         pauseMenu.SetActive(false);
+        optionsMenu.SetActive(false);
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -97,6 +99,20 @@ public class PlayerStateManager : MonoBehaviour
     public void RestartLevel()
     {
         SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().name);
+    }
+
+    // Show options menu
+    public void ShowOptionsMenu()
+    {
+        pauseMenu.SetActive(false);
+        optionsMenu.SetActive(true);
+    }
+
+    // Show pause menu
+    public void ShowPauseMenu()
+    {
+        pauseMenu.SetActive(true);
+        optionsMenu.SetActive(false);
     }
 
     // Back to hub
