@@ -57,7 +57,7 @@ public class MusicManager : MonoBehaviour
     // Have one value slowly approach another over a certain amount of time
     private float Fade(float currentValue, float endValue, float fadeTime)
     {
-        if (currentValue < endValue)
+        if (currentValue < endValue) // Fading in
         {
             if (currentValue + (maxVolume * Time.deltaTime / fadeTime) < endValue)
             {
@@ -68,7 +68,7 @@ public class MusicManager : MonoBehaviour
                 return endValue;
             }
         }
-        else if (currentValue > endValue)
+        else if (currentValue > endValue) // Fading out
         {
             if (currentValue - (maxVolume * Time.deltaTime / fadeTime) > endValue)
             {

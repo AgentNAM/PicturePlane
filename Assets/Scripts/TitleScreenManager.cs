@@ -18,11 +18,13 @@ public class TitleScreenManager : MonoBehaviour
         
     }
 
+    // Start a new game
     public void NewGame()
     {
         SceneManager.LoadSceneAsync("Hub");
     }
 
+    // Exit the game
     public void QuitGame()
     {
         Application.Quit();

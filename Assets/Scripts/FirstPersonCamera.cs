@@ -13,7 +13,7 @@ public class FirstPersonCamera : MonoBehaviour
 
     public Slider sensitivitySlider;
     public TextMeshProUGUI sensitivityText;
-    public float sensitivity = 150.0f;
+    public float sensitivity = 100.0f;
 
     private PlayerStateManager playerStateManager;
 
@@ -28,13 +28,18 @@ public class FirstPersonCamera : MonoBehaviour
         // Prevent camera rotation from being reset
         yRotation = transform.eulerAngles.y;
         xRotation = (transform.eulerAngles.x + 180f) % 360f - 180f;
+
+        // Set sensitivity slider value in options menu
+        sensitivitySlider.value = sensitivity;
     }
 
     // Update is called once per frame
     void Update()
     {
+        // If the game is not paused
         if (!playerStateManager.paused)
         {
+            // If the player is in 3D mode
             if (playerStateManager.modeIs3D)
             {
                 // Get mouse input
@@ -58,6 +63,7 @@ public class FirstPersonCamera : MonoBehaviour
         }
     }
 
+    // Sensitivity slider logic
     public void OnSensitivityChanged()
     {
         sensitivity = sensitivitySlider.value;

@@ -76,7 +76,7 @@ public class Player2DController : MonoBehaviour
         playerStateManager.UpdateScreenBorderMaterial();
 
         // Set up audio source
-        playerAudioSource = GetComponent<AudioSource>();
+        playerAudioSource = seenMarker.GetComponent<AudioSource>();
     }
 
     // Update is called once per frame
@@ -312,14 +312,16 @@ public class Player2DController : MonoBehaviour
         // For each local direction
         foreach (Vector3 localDir in localDirs)
         {
-            // Get the position of the player offset in the local direction (player edges and corners)
+            // Get the position of Player2D offset in the local direction (player edges and corners)
             Vector3 offsetPos = GetOffsetPos(transform.position, localDir, seenScale / 2);
 
             Vector3 backDir = (offsetPos - Camera.main.transform.position).normalized;
             Vector3 pointToCheck = offsetPos - (backDir * transform.localScale.y);
 
+            // If the player's view of Player2D is obstructed
             if (FindSurfaceTypeAtPoint(pointToCheck) != null)
             {
+                // Add a degree of leniency to the view obstruction check
                 if (FindSurfaceTypeAtPoint(pointToCheck) == "SurfaceMagenta" || localDir == Vector3.zero)
                 {
                     return false;
@@ -330,6 +332,7 @@ public class Player2DController : MonoBehaviour
         return true;
     }
 
+    // Push Player2D in front of the wall it is currently on
     void PushPlayer2DBack()
     {
         Vector3[] localDirs = new Vector3[]
@@ -352,19 +355,26 @@ public class Player2DController : MonoBehaviour
 
         bool playerIsInsideWall = true;
 
+        // While Player2D is inside of a wall
         while (playerIsInsideWall)
         {
             playerIsInsideWall = false;
+
+            // For each local direction
             foreach (Vector3 localDir in localDirs)
             {
+                // Get the position of Player2D offset in the local direction (player edges and corners),
+                // as well as the position of Player2D offset in the negative of the local direction
                 Vector3 offsetPosNorm = GetOffsetPos(transform.position, localDir, seenScale / 2);
                 Vector3 offsetPosAnti = GetOffsetPos(transform.position, -localDir, seenScale / 2);
                 Physics.Linecast(offsetPosNorm, offsetPosAnti, out RaycastHit hit);
 
                 bool pointIsInsideWall = true;
 
+                // While the current point is inside of a wall
                 while (pointIsInsideWall)
                 {
+                    // If the current point is not inside of a wall, end the loop
                     if (hit.collider == null)
                     {
                         pointIsInsideWall = false;
@@ -375,8 +385,10 @@ public class Player2DController : MonoBehaviour
                     }
                     else
                     {
+                        // Player2D is still inside of a wall
                         playerIsInsideWall = true;
 
+                        // Push Player2D closer to the camera
                         Vector3 backDir = (Camera.main.transform.position - footPos).normalized;
 
                         transform.position = footPos;
@@ -384,6 +396,7 @@ public class Player2DController : MonoBehaviour
                         footPos = transform.position;
                         transform.position = GetOffsetPos(footPos, transform.up, seenScale / 2);
 
+                        // Get new positions to check
                         offsetPosNorm = GetOffsetPos(transform.position, localDir, seenScale / 2);
                         offsetPosAnti = GetOffsetPos(transform.position, -localDir, seenScale / 2);
                         Physics.Linecast(offsetPosNorm, offsetPosAnti, out hit);
@@ -417,17 +430,20 @@ public class Player2DController : MonoBehaviour
         }
     }
 
+    // Set Player2D's position in 3D space based on the SeenMarker's position in 2D space
     void ReSyncRealPosition()
     {
         transform.position = FindClosestPoint(seenMarker.transform.position);
     }
 
+    // Get the 3D space equivalent of a value used by the SeenMarker
     float SeenToReal(float seenValue, Vector3 referencePoint)
     {
         float realCamDistance = Vector3.Magnitude(Camera.main.transform.position - referencePoint);
         return (seenValue / seenCamDistance) * realCamDistance;
     }
 
+    // Convert a vector used by the Player2D's real position to a vector that the SeenMarker can use
     Vector3 RealToSeen(Vector3 realValue)
     {
         return Vector3.ClampMagnitude(realValue - Camera.main.transform.position, seenCamDistance);
@@ -435,7 +451,7 @@ public class Player2DController : MonoBehaviour
 
     private string FindSurfaceTypeAtPoint(Vector3 endPoint)
     {
-        // Do a Linecast between the camera and Player2D, then return the first GameObject hit by the Linecast
+        // Do a Linecast between the camera and the endPoint, then return the first GameObject hit by the Linecast
         Physics.Linecast(Camera.main.transform.position, endPoint, out RaycastHit hit);
 
         // Return the tag of the first GameObject hit by the Linecast, or return null if the Linecast did not hit anything
@@ -449,6 +465,7 @@ public class Player2DController : MonoBehaviour
         }
     }
 
+    // Do a Linecast from the camera in a direction until a surface is hit, then return the end position
     Vector3 FindClosestPoint(Vector3 aimPos, float pullBack = 0.0f)
     {
         Vector3 castPos = aimPos;
@@ -471,6 +488,7 @@ public class Player2DController : MonoBehaviour
         return castPos;
     }
 
+    // Get a position offset in a direction
     Vector3 GetOffsetPos(Vector3 basePos, Vector3 localDir, float offsetAmount)
     {
         Vector3 offset = localDir * SeenToReal(offsetAmount, basePos);
@@ -483,6 +501,7 @@ public class Player2DController : MonoBehaviour
         return FindSurfaceTypeAtPoint(FindClosestPoint(offsetPos));
     }
 
+    // Get the highest priority surface colliding with the player
     string GetScaledCollision(Vector3 basePos)
     {
         Vector3[] localDirs = new Vector3[]
@@ -511,6 +530,7 @@ public class Player2DController : MonoBehaviour
         return prioritizedSurfaceType;
     }
 
+    // Take an array of surface types and return the one with the highest priority
     string GetPrioritizedSurfaceType(string[] surfaceTypes)
     {
         string highestSurface = null;
@@ -526,6 +546,7 @@ public class Player2DController : MonoBehaviour
         return highestSurface;
     }
 
+    // Used for walking along sloped floors and sliding along sloped walls
     void MoveAlongSlope(Vector3 worldDir, float tolerance, out bool canMove)
     {
         canMove = true;
@@ -555,15 +576,19 @@ public class Player2DController : MonoBehaviour
         onFloor = false;
     }
 
+    // Respawns the player
     IEnumerator Respawn()
     {
         isRespawning = true;
 
+        // Play death sound
         playerAudioSource.clip = deathSound;
         playerAudioSource.Play();
 
+        // Play death particle
         deathParticle.Play();
 
+        // Hide Player2D
         seenMarker.GetComponent<Renderer>().enabled = false;
 
         yield return new WaitForSeconds(respawnTime);
@@ -582,6 +607,7 @@ public class Player2DController : MonoBehaviour
 
         playerStateManager.UpdateScreenBorderMaterial();
 
+        // Show Player2D
         seenMarker.GetComponent<Renderer>().enabled = true;
 
         isRespawning = false;
